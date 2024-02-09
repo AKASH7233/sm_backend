@@ -159,9 +159,6 @@ const showPostLikes = asyncHandler( async(req,res)=>{
     if(!postId){
         throw new ApiError(400, "Invalid PostID")
     }
-
-    console.log(postId);
-
     const Postlikes = await Post.aggregate([
         {
            $match:{
@@ -173,19 +170,32 @@ const showPostLikes = asyncHandler( async(req,res)=>{
                 from: "likes",
                 localField: "_id",
                 foreignField: "post",
-                as: "Post"
+                as: "likes"
             }
         },
         {
             $addFields:{
                 likedCount : {
-                    $size : "$Post"
-                }
+                    $size : "$likes"
+                },
+                likedBy: "$likes.likedBy"
+                
+            }
+        },
+        {
+            $project:{
+                likedCount:1,
+                likedBy:1,
+
             }
         }
         
     ])
-    console.log(Postlikes);
+
+    if (!Postlikes) {
+        throw new ApiError(400,"Invalid Post ID")
+    }
+
     return res
     .status(200)
     .json(
@@ -197,11 +207,55 @@ const showPostLikes = asyncHandler( async(req,res)=>{
     )
 })
 
+const postComments = asyncHandler( async(req,res)=>{
+    const {postId} = req.params
+
+    if(!postId){
+        throw new ApiError(400,"postId is required")
+    }
+
+    const comments = await Post.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(postId)
+            }
+        },
+        {
+            $lookup:{
+                from: "comments",
+                localField:"_id",
+                foreignField: "post",
+                as: "comments"
+            }
+        },
+        {
+            $project:{
+                comments:1
+            }
+        }
+    ])
+
+    if(!comments){
+        throw new ApiError(400, "Invalid  Post Id")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            comments,
+            "Post's comments Fetched successfully !!"
+        )
+    )
+})
+
 export {
     uploadPost,
     updatePostTitle,
     deletePost,
     showPosts,
     hidePost,
-    showPostLikes
+    showPostLikes,
+    postComments
 }

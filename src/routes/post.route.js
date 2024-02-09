@@ -5,10 +5,12 @@ import {
     uploadPost, 
     showPosts, 
     hidePost, 
-    showPostLikes
+    showPostLikes,
+    postComments
 } from "../controllers/post.controller.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 import { verifyJWT } from "../middlewares/auth.js";
+import { postComment } from "../controllers/comment.controller.js";
 
 const router = Router();
 router.use(verifyJWT)
@@ -40,6 +42,10 @@ router.route('/hidepost/:postId').post(
 )
 router.route('/showlikes/:postId').post(
     showPostLikes
+)
+
+router.route('/showcomments/:postId').post(
+    postComments
 )
 
 export default router
