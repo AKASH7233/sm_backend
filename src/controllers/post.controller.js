@@ -8,6 +8,7 @@ import { User } from "../models/user.model.js";
 const showPosts = asyncHandler( async(_,res)=>{
     const getAllposts = await Post.find({"isPublished" : true})
     console.log(getAllposts);
+
     return res
     .status(200)
     .json(
@@ -46,7 +47,7 @@ const uploadPost = asyncHandler( async(req,res)=>{
         title,
         postFile : postFile.url,
         postedBy,
-        isPublished
+        isPublished,
     })
 
     if(!post){
@@ -150,6 +151,7 @@ const hidePost = asyncHandler( async(req,res)=>{
         )
     )
 })
+
 
 export {
     uploadPost,

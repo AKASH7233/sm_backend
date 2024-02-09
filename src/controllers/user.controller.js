@@ -68,8 +68,8 @@ const UserRegister = asyncHandler( async (req,res) => {
         username: username.toLowerCase(),
         fullName,
         email,
-        ProfileImage : ProfileImage.url,
-        coverImage : coverImage.url || '' ,
+        ProfileImage : ProfileImage.url || null,
+        coverImage : coverImage.url || null ,
         password,
     })
 
@@ -167,6 +167,24 @@ const userLogout = asyncHandler( async(req,res)=>{
             201,
             {},
             "User LoggedOut Successfully"
+        )
+    )
+})
+
+const currentUser = asyncHandler( async(req,res)=>{
+    const user  = await User.findById(req.user._id).select("-password -refreshToken -email")
+
+    if(!user){
+        throw new ApiError(500,"Failed to Fetch Your Profile")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "Fetched Profile successfully !!"
         )
     )
 })
@@ -408,6 +426,7 @@ export {
     UserRegister,
     userLogin,
     userLogout,
+    currentUser,
     updateAccountDetails,
     refreshAccessToken,
     updateCoverImage,

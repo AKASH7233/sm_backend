@@ -11,7 +11,8 @@ import {
     updatePassword,
     deleteProfileImage,
     deletecoverImage,
-    deleteUser 
+    deleteUser, 
+    currentUser
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.js";
 
@@ -39,6 +40,10 @@ router.route('/logout').post(
 router.route('/logout').post(
     verifyJWT,
     userLogout
+)
+router.route('/profile').post(
+    verifyJWT,
+    currentUser
 )
 router.route('/updateaccount').post(
     verifyJWT,

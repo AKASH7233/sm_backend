@@ -10,9 +10,6 @@ const postSchema = new Schema(
             type: String,
             required : true
         },
-        description: {
-            type: String,
-        },
         duration:{
             type:Number
         },
@@ -23,20 +20,12 @@ const postSchema = new Schema(
         isPublished: {
             type: Boolean
         },
-        likes:{
-            type: Number,
-            default: 0
-        },
         likedBy:[
             {
                 type: Schema.Types.ObjectId,
                 ref: "Like",
             }
         ],
-        comments:{
-            type: Number,
-            default: 0
-        },
         commentedBy:[
             {
                 type: Schema.Types.ObjectId,
