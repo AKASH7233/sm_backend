@@ -34,12 +34,6 @@ const userSchema = new Schema(
         refreshToken:{
             type: String
         },
-        Followers:{
-           type : Number
-        },
-        Following : {
-           type: Number
-        },
         posts: [
             {
                 type : Schema.Types.ObjectId,

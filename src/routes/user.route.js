@@ -12,7 +12,8 @@ import {
     deleteProfileImage,
     deletecoverImage,
     deleteUser, 
-    currentUser
+    currentUser,
+    getUserProfile
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.js";
 
@@ -90,8 +91,12 @@ router.route('/deletecoverImage').post(
     deletecoverImage
 )
 router.route('/deleteUser').post(
-    
+    verifyJWT,
     deleteUser
+)
+router.route('/profile/:username').post(
+    verifyJWT,
+    getUserProfile
 )
 
 export default router

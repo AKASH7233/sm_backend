@@ -20,12 +20,6 @@ const postSchema = new Schema(
         isPublished: {
             type: Boolean
         },
-        likedBy:[
-            {
-                type: Schema.Types.ObjectId,
-                ref: "Like",
-            }
-        ],
         commentedBy:[
             {
                 type: Schema.Types.ObjectId,

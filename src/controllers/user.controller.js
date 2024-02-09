@@ -422,6 +422,82 @@ const deleteUser = asyncHandler( async (req,res)=> {
     
 })
 
+const getUserProfile = asyncHandler( async(req,res)=>{
+    const {username} = req.params;
+
+    if(!username){
+        throw new ApiError(400, "Invalid Username")
+    }
+
+    const profile = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from: "follows",
+                localField: "_id",
+                foreignField: "followedTo",
+                as: "followers"
+            }
+        },
+        {
+            $lookup: {
+                from : "follows",
+                localField: "_id",
+                foreignField: "followedBy",
+                as: "following"
+            }
+        },
+        {
+            $addFields: {
+                FollowersCount:{
+                    $size: "$followers"
+                },
+                FollowingCount: {
+                    $size: "$following"
+                },
+                isFollowing:{
+                    $cond: {
+                        if: {$in: [req.user?.id, "$followers.following"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+
+        },
+        {
+            $project:{
+                username: 1,
+                avatar:1,
+                fullName: 1,
+                coverImage:1,
+                FollowersCount:1,
+                FollowingCount:1,
+                isFollowing:1,
+                posts:1,
+            }
+        }
+    ])
+
+    if(!profile){
+        throw new ApiError(400,"user does not exist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            profile,
+            "User Profile Fetched Successfully"
+        )
+    )
+})
+
 export {
     UserRegister,
     userLogin,
@@ -434,5 +510,6 @@ export {
     updatePassword,
     deleteProfileImage,
     deletecoverImage,
-    deleteUser
+    deleteUser,
+    getUserProfile
 }

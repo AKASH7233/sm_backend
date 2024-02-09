@@ -4,11 +4,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
-const showPosts = asyncHandler( async(_,res)=>{
+const showPosts = asyncHandler( async(_,res,next)=>{
     const getAllposts = await Post.find({"isPublished" : true})
-    console.log(getAllposts);
-
     return res
     .status(200)
     .json(
@@ -18,6 +17,8 @@ const showPosts = asyncHandler( async(_,res)=>{
             "Get all Post"
         )
     )
+    
+    next()
 })
 
 const uploadPost = asyncHandler( async(req,res)=>{
@@ -152,11 +153,55 @@ const hidePost = asyncHandler( async(req,res)=>{
     )
 })
 
+const showPostLikes = asyncHandler( async(req,res)=>{
+    const {postId} = req.params;
+    
+    if(!postId){
+        throw new ApiError(400, "Invalid PostID")
+    }
+
+    console.log(postId);
+
+    const Postlikes = await Post.aggregate([
+        {
+           $match:{
+            _id: new mongoose.Types.ObjectId(postId)
+           }
+        },
+        {
+            $lookup:{
+                from: "likes",
+                localField: "_id",
+                foreignField: "post",
+                as: "Post"
+            }
+        },
+        {
+            $addFields:{
+                likedCount : {
+                    $size : "$Post"
+                }
+            }
+        }
+        
+    ])
+    console.log(Postlikes);
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            Postlikes,
+            "Liked Users"
+        )
+    )
+})
 
 export {
     uploadPost,
     updatePostTitle,
     deletePost,
     showPosts,
-    hidePost
+    hidePost,
+    showPostLikes
 }

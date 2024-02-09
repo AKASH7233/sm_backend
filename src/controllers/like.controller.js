@@ -2,14 +2,14 @@ import {asyncHandler} from '../utils/asyncHandler.js'
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
 import { Like } from '../models/likes.model.js'
-import { isValidObjectId } from 'mongoose'
-import { Post } from '../models/post.model.js'
+import mongoose, { isValidObjectId } from 'mongoose'
+import { User } from '../models/user.model.js'
 
  
 
 const toggleLike = asyncHandler( async(req,res)=>{
     const {postId} = req.params
-    
+
     if(!isValidObjectId(postId)){
         throw new ApiError(400, "Post Id is not Valid")
     }
@@ -25,11 +25,6 @@ const toggleLike = asyncHandler( async(req,res)=>{
         unlike = await Like.deleteOne({
             post : postId
         })
-        const post = await Post.findById(postId)
-        post.likedBy.pop(req.user)
-        post.save()
-
-        console.log(post);
         if(!unlike){
             throw new ApiError(500, "Failed To unlike the post")
         }
@@ -37,13 +32,9 @@ const toggleLike = asyncHandler( async(req,res)=>{
     else{
         like = await Like.create({
             post: postId,
-            likedBy: req.user._id
+            likedBy: req.user
         })
-        const post = await Post.findById(postId)
-        await post.likedBy.push(req.user)
-        post.save()        
 
-        console.log(post);
         if(!like){
             throw new ApiError(
                 500,
@@ -52,7 +43,6 @@ const toggleLike = asyncHandler( async(req,res)=>{
         }
     }
 
-    
     return res
     .status(200)
     .json(
@@ -65,7 +55,43 @@ const toggleLike = asyncHandler( async(req,res)=>{
 
 })
 
+const LikedPost = asyncHandler(async(req,res)=>{
+    const userInfo = await User.findById(req.user?._id).select("username ProfileImage")
+    
+    const {postId} = req.params
+    if(!postId){
+        throw new ApiError(400,"Invalid PostId")
+    }
+
+    const postlike = await Like.aggregate([
+        {
+            $match: {
+                post: new mongoose.Types.ObjectId(postId)
+            }
+        },
+        {
+            $group: {
+                _id: "post",
+                likedBy: {$push: userInfo},
+            }
+        },        
+    ])
+
+    console.log(await Like.find({
+        post: postId}
+        ));
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            postlike,
+            "liked User Fetched"
+        )
+    )
+})
 
 export {
-    toggleLike
+    toggleLike,
+    LikedPost
 }
