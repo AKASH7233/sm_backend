@@ -5,11 +5,41 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
+import { ApiErrResponse } from "../utils/apiErrResponse.js";
 
 const showPosts = asyncHandler( async(_,res,next)=>{
-    const getAllposts = await Post.find({"isPublished" : true})
-    return res
-    .status(200)
+    const getAllposts = await Post.aggregate([
+        {
+            $match: {
+                isPublished: true
+            }
+        },
+        {
+            $lookup: {
+              from: "users", 
+              localField: "postedBy",
+              foreignField: "_id",  
+              as: "owner"  
+            }
+        },
+        {
+            $unwind: "$owner"
+        },
+        {
+            $project:{
+                "owner.password": 0,
+                "owner.fullName": 0,
+                "owner.email": 0,
+                "owner.coverImage": 0,
+                "owner.posts": 0,
+                "owner.createdAt": 0,
+                "owner.updatedAt": 0,
+                "owner.refreshToken": 0,
+            }
+        }
+    ])
+
+    return res.status(200)
     .json(
         new ApiResponse(
             200,
@@ -22,54 +52,66 @@ const showPosts = asyncHandler( async(_,res,next)=>{
 })
 
 const uploadPost = asyncHandler( async(req,res)=>{
-    const {title} = req.body
+        try {
+            const {title} = req.body
+            if(!title){
+                throw new ApiError(401, "Title is Required")
+            }
+            
+            if(!req.files.postFile){
+                throw new ApiError(401, "Please upload a File")
+            }
 
-    if(!title){
-        throw new ApiError(401, "Title is Required")
-    }
+            const postLocalPath = req?.files.postFile[0].path;
+            
+            if(!postLocalPath){
+                throw new ApiError(401, "Post should contain a Image/Video")
+            }
+        
+            const postFile = await uploadToCloudinary(postLocalPath)
+        
+            if(!postFile){
+                throw new ApiError(500, "Failed To upload post-file")
+            }
+        
+            const isPublished = true
+        
+            const postedBy = await User.findById(req.user._id).select("username ProfileImage")
 
-    const postLocalPath = req.files?.postFile[0].path;
-
-    if(!postLocalPath){
-        throw new ApiError(401, "Post should contain a Image/Video")
-    }
-
-    const postFile = await uploadToCloudinary(postLocalPath)
-
-    if(!postFile){
-        throw new ApiError(500, "Failed To upload post-file")
-    }
-
-    const isPublished = true
-
-    const postedBy = await User.findById(req.user._id).select("-password -fullName -refreshToken -accessToken -email -coverImage -posts -createdAt -updatedAt ")
-
-    const post = await Post.create({
-        title,
-        postFile : postFile.url,
-        postedBy,
-        isPublished,
-    })
-
-    if(!post){
-        throw new ApiError(500,"Failed to Upload Post")
-    }
+            console.log(postedBy);
+        
+            const post = await Post.create({
+                title,
+                postFile : postFile.url,
+                postedBy,
+                isPublished,
+            })
+        
+            if(!post){
+                throw new ApiError(500,"Failed to Upload Post")
+            }
+            
+        
+            const user = await User.findById(req.user._id)
+            
+            user.posts.push(post)
+            user.save({validateBeforeSave : false})
+        
+            return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    post,
+                    "Post uploaded Successfully"
+                )
+            )
+        } catch (error) {
+            return res.json(
+                new ApiErrResponse(error)
+            )
+        }
     
-
-    const user = await User.findById(req.user._id)
-    
-    user.posts.push(post)
-    user.save({validateBeforeSave : false})
-
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            post,
-            "Post uploaded Successfully"
-        )
-    )
 })
 
 const updatePostTitle = asyncHandler( async(req,res)=>{

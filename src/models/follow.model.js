@@ -2,15 +2,16 @@ import mongoose,{Schema} from "mongoose";
 
 const followSchema = new Schema(
     {
-        followedTo:{
+        followedBy:{
             type: Schema.Types.ObjectId,
             ref: "User"
         },
 
-        followedBy: {
+        followedTo: { 
             type : Schema.Types.ObjectId,
             ref:"User"
         }
+
 
     },{timestamps: true}
 )

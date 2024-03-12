@@ -27,7 +27,7 @@ router.route('/register').post(
         },
         {
             name: "ProfileImage",
-            maxCount: 1
+            maxCount: 1 
         }
     ]),
     UserRegister

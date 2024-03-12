@@ -48,23 +48,26 @@ const toggleFollow = asyncHandler( async(req,res)=>{
 })
 
 const Followers = asyncHandler( async(req,res)=>{
-    const {followedBy} = req.params;
+    const {followedTo} = req.params;
     
-    if(!followedBy){
+    if(!followedTo){
         throw new ApiError(400, "Followed id does not exist")
     }
 
     const follower = await Follow.aggregate([
         {
             $match: {
-                followedTo : new mongoose.Types.ObjectId(followedBy)
+                followedTo : new mongoose.Types.ObjectId(followedTo)
             }
         },
         {
             $group:{
                 _id: "followedTo",
-                followers: {$push: "$followedBy"}
+                followers: {$push: req?.user._id}
             }
+        },
+        {
+            $unwind : '$followedBy'
         },
         {
             $project:{
@@ -105,15 +108,16 @@ const following = asyncHandler( async(req,res)=>{
     const followings = await Follow.aggregate([
         {
             $match: {
-                followedBy : new mongoose.Types.ObjectId(followingTo)
+                followedBy : new mongoose.Types.ObjectId(req?.user?._id)
             }
         },
         {
             $group:{
                 _id:"followedBy",
-                following: {$push:"$followedTo"}
+                following: {$push:"$followedBy"}
             }
-        },{
+        },
+        {
             $project:{
                 _id: 0,
                 following:1
