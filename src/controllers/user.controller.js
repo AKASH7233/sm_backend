@@ -21,123 +21,137 @@ const generateRefreshTokenAndAccessToken = async(userid) => {
 
 const UserRegister = asyncHandler( async (req,res) => {
    
-    const {fullName, email , username , password } = req.body
-    console.log('email' , email);
-
-    if([fullName,email,username,password].some((fields)=>
-        fields === undefined )){
-        throw new ApiError(400,'Every Field should be filled')
-    }
-
-    if(fullName.length < 3){
-        throw new ApiError(401, 'FullName should have atleast 3 character')
-    }
-
-    if(password.length < 3){
-        throw new ApiError(401, 'Password should have atleast 8 character')
-    }
-    
-
-   if( await User.findOne({
-    $or: [ {email}, {username} ]})){
-        throw new ApiError(408, 'username and email already exists')
-    }
-
-    if(!email.includes('@' && '.com')){
-        throw new ApiError(408,'email is invalid')
-    }
-
-    console.log(req.files);
-    
-    let ProfileImageLocalPath;
-    if(req.files && Array.isArray(req.files.ProfileImage) && req.files.ProfileImage.length >0 ){
-        ProfileImageLocalPath =  req.files?.ProfileImage[0]?.path;
-    }
-
-    let coverImageLocalPath;
-    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0 ){
-        coverImageLocalPath =  req.files?.coverImage[0]?.path;
-    }
-
-
-    const ProfileImage = await uploadToCloudinary(ProfileImageLocalPath)
-    const coverImage = await uploadToCloudinary(coverImageLocalPath)
-
-
-    const user = await User.create({
-        username: username.toLowerCase(),
-        fullName,
-        email,
-        ProfileImage : ProfileImage.url || null,
-        coverImage : coverImage.url || null ,
-        password,
-    })
-
-    const createdUser = await User.findById(user._id).select(
-        '-password -refreshToken'
-    )
-
-    if(!createdUser){
-        throw new ApiError(500, 'registering Failed')
-    }
-
-    return res.status(201).json(
-        new ApiResponse(200, createdUser , 'User Registered successfully')
-    )
+   try {
+     const {fullName, email , username , password } = req.body
+ 
+     if([fullName,email,username,password].some((field)=> field?.trim() === "")){
+         throw new ApiError(400,'Every Field should be filled')
+     }
+ 
+     if(fullName.length < 3){
+         throw new ApiError(401, 'FullName should have atleast 3 character')
+     }
+ 
+     if(password.length < 8){
+         throw new ApiError(401, 'Password should have atleast 8 character')
+     }
+     
+ 
+    if( await User.findOne({
+     $or: [ {email}, {username} ]})){
+         throw new ApiError(408, 'username and email already exists')
+     }
+ 
+     if(!email.includes('@' && '.com')){
+         throw new ApiError(408,'email is invalid')
+     }
+ 
+     console.log(req.files);
+     
+     let ProfileImageLocalPath;
+     if(req.files && Array.isArray(req.files.ProfileImage) && req.files.ProfileImage.length >0 ){
+         ProfileImageLocalPath =  req.files?.ProfileImage[0]?.path;
+     }
+ 
+     let coverImageLocalPath;
+     if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0 ){
+         coverImageLocalPath =  req.files?.coverImage[0]?.path;
+     }
+ 
+ 
+     const ProfileImage = await uploadToCloudinary(ProfileImageLocalPath)
+     const coverImage = await uploadToCloudinary(coverImageLocalPath)
+ 
+ 
+     const user = await User.create({
+         username: username.toLowerCase(),
+         fullName,
+         email,
+         ProfileImage : ProfileImage?.url || null,
+         coverImage : coverImage?.url || null ,
+         password,
+     })
+ 
+     const createdUser = await User.findById(user._id).select(
+         '-password -refreshToken'
+     )
+ 
+     if(!createdUser){
+         throw new ApiError(500, 'registering Failed')
+     }
+ 
+     return res.status(201).json(
+         new ApiResponse(200, createdUser , 'User Registered successfully')
+     )
+   } catch (error) {
+        return res.json(
+            {
+                "statuscode" : error.statuscode,
+                "error" : error.message
+            }
+        )
+   }
 })  
 
 const userLogin = asyncHandler( async(req,res) => {
-    const {username, email , password} = req.body
-
-    if([email,username,password].some((fields)=>
-    fields === undefined )){
-        throw new ApiError(400,'Every Field should be filled')
-    }
-
-    console.log(email);
-    // if(password.length < 8){
-    //     throw new ApiError(401, "Password should contain atleast 8 characters")
-    // }
-    const user = await User.findOne({
-        $or: [
-            {username}, {email}
-        ]
-    })
-
-    if(!user){
-        throw new ApiError(401, "User does not exists !")
-    }
-
-    console.log(user);
-  
-    const isPasswordCorrect = await user.isPasswordCorrect(password)
+    try {
+        const {username, email , password} = req.body
     
-    if(!isPasswordCorrect){
-        throw new ApiError(401, "Invalid password")
-    }
-
-    const {accessToken,refreshToken} = await generateRefreshTokenAndAccessToken(user?._id)
-
-    const loggedInUser = await User.findById(user?._id).select('-password ')
-
-    const options = {
-        httpOnly: true,
-        secure : true
-    }
-
-    res
-    .status(200)
-    .cookie("accessToken", accessToken , options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
-        new ApiResponse(
-            201,
-            {
-                user: loggedInUser, accessToken, refreshToken
-            },
-            "User Loggedin Successfully"
+        if([email,username,password].some((field)=> field?.trim() === "")){
+            throw new ApiError(400,'Every Field should be filled')
+        }
+    
+        if(password.length < 8){
+            throw new ApiError(401, "Password should contain atleast 8 characters")
+        }
+        const user = await User.findOne({
+            $or: [
+                {username}, {email}
+            ]
+        })
+    
+        if(!user){
+            throw new ApiError(401, "User does not exists !")
+        }
+    
+        console.log(user);
+      
+        const isPasswordCorrect = await user.isPasswordCorrect(password)
+        
+        if(!isPasswordCorrect){
+            throw new ApiError(401, "Invalid password")
+        }
+    
+        const {accessToken,refreshToken} = await generateRefreshTokenAndAccessToken(user?._id)
+    
+        const loggedInUser = await User.findById(user?._id).select('-password ')
+    
+        const options = {
+            httpOnly: true,
+            secure : true
+        }
+    
+        res
+        .status(200)
+        .cookie("accessToken", accessToken , options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                201,
+                {
+                    user: loggedInUser, accessToken, refreshToken
+                },
+                "User Loggedin Successfully"
+            )
         )
-    )
+    } catch (error) {
+        return res.json(
+            {
+                "statuscode" : error.statuscode,
+                "error" : error.message
+            }
+        )
+    }
 })
 
 const userLogout = asyncHandler( async(req,res)=>{
